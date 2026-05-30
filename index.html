@@ -165,19 +165,23 @@
 
     /* fighter name inputs */
     .fighter-names-row { display: grid; grid-template-columns: 1fr 28px 1fr; border-bottom: 2px solid var(--black); }
-    .name-wrap { position: relative; display: flex; align-items: center; }
-    .name-wrap.red { border-right: 1px solid var(--gray-light); }
+    .name-wrap { position: relative; display: flex; align-items: center; padding: 4px 6px; }
+    .name-wrap.red { border-right: 1px solid var(--gray-light); background: #fff5f5; }
+    .name-wrap.blue { background: #f5f7ff; }
     .name-input {
-      border: none; border-bottom: 1px dashed transparent;
-      padding: 6px 22px 6px 8px; font-size: 11px; font-weight: 700;
+      border: 1px solid var(--gray-light); border-radius: 2px;
+      padding: 5px 28px 5px 8px; font-size: 11px; font-weight: 700;
       text-transform: uppercase; letter-spacing: 0.5px; text-align: center;
-      width: 100%; background: transparent; color: var(--black); outline: none;
-      transition: background 0.15s, border-color 0.15s;
+      width: 100%; background: var(--white); color: var(--black); outline: none;
+      transition: border-color 0.15s, box-shadow 0.15s;
+      cursor: text;
     }
-    .name-input:focus { background: #fffce8; border-bottom-color: var(--gold); }
+    .name-input:hover { border-color: var(--gray); }
+    .name-input:focus { border-color: var(--gold); box-shadow: 0 0 0 2px rgba(232,185,35,0.25); background: #fffce8; }
+    .name-input::placeholder { color: #ccc; font-weight: 400; letter-spacing: 0; text-transform: none; font-style: italic; }
     .name-edit-icon {
-      position: absolute; right: 5px; top: 50%; transform: translateY(-50%);
-      font-size: 9px; color: var(--gray); pointer-events: none; opacity: 0.6;
+      position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
+      font-size: 10px; color: var(--gray); pointer-events: none; opacity: 0.5;
     }
     .vs-mid {
       background: #111; display: flex; align-items: center;
@@ -273,6 +277,26 @@
     .winner-btn.blue-btn.selected { background: var(--blue); color: var(--white); }
     .winner-btn.draw-btn.selected { background: #555; color: var(--white); }
 
+    /* ── DESCRIPTION SECTION ── */
+    .description-section {
+      display: flex; align-items: stretch; border-top: 1px solid var(--gray-light);
+    }
+    .description-label {
+      padding: 6px 8px; font-size: 8px; font-weight: 700; letter-spacing: 1px;
+      color: #999; background: #f0f0f0; border-right: 1px solid var(--gray);
+      white-space: nowrap; flex-shrink: 0; display: flex; align-items: center;
+    }
+    .description-input {
+      flex: 1; border: none; padding: 6px 8px;
+      font-size: 11px; font-weight: 600; font-family: Arial, Helvetica, sans-serif;
+      color: var(--black); background: #fafafa; outline: none;
+      letter-spacing: 0.5px; text-transform: uppercase;
+    }
+    .description-input::placeholder { color: #ccc; font-weight: 400; text-transform: none; }
+    .description-input:focus { background: var(--active-bg); border-bottom: 1px solid var(--gold); }
+    .focus-mode .description-input { font-size: 13px; padding: 9px 10px; }
+    .focus-mode .description-label { font-size: 10px; padding: 9px 10px; }
+
     /* ── FOCUS MODE SCALING ── */
     .focus-mode .strikes-num { font-size: 40px; }
     .focus-mode .td-strikes  { width: 110px; padding: 12px 8px; }
@@ -281,7 +305,8 @@
     .focus-mode .total-sc-inp { font-size: 26px; }
     .focus-mode .td-rnum     { font-size: 17px; padding: 14px 5px; width: 38px; min-width: 38px; }
     .focus-mode .scorecard-table thead th { font-size: 10px; padding: 6px 3px; }
-    .focus-mode .name-input  { font-size: 14px; padding: 9px 24px 9px 9px; }
+    .focus-mode .name-input  { font-size: 14px; padding: 8px 30px 8px 10px; }
+    .focus-mode .name-wrap   { padding: 6px 8px; }
     .focus-mode .corner-banner { font-size: 12px; padding: 8px; letter-spacing: 3px; }
     .focus-mode .corner-banners { grid-template-columns: 1fr 38px 1fr; }
     .focus-mode .fighter-names-row { grid-template-columns: 1fr 38px 1fr; }
@@ -351,6 +376,7 @@ const mkFight = (id) => ({
   redName: '', blueName: '',
   activeRound: 0,
   winner: null,           // null | 'red' | 'blue' | 'draw'
+  description: '',        // method of victory e.g. TKO, Split Decision
   redTotalOverride: null, // null = auto-calc from round scores
   blueTotalOverride: null,
   rounds: Array.from({ length: ROUNDS }, () => ({ redPts: 0, bluePts: 0, redScore: 10, blueScore: 10 }))
@@ -365,7 +391,7 @@ const state = {
 // ── Persistence ────────────────────────────────────────────────────────
 function load() {
   try {
-    const s = localStorage.getItem('dfc_v2');
+    const s = localStorage.getItem('dfc_v3');
     if (s) {
       const p = JSON.parse(s);
       if (Array.isArray(p.fights) && p.fights.length === FIGHTS) {
@@ -377,7 +403,7 @@ function load() {
 }
 
 function save() {
-  localStorage.setItem('dfc_v2', JSON.stringify({ fights: state.fights }));
+  localStorage.setItem('dfc_v3', JSON.stringify({ fights: state.fights }));
 }
 
 // ── Render ─────────────────────────────────────────────────────────────
@@ -586,6 +612,23 @@ function buildCard(fight, idx, pfx) {
   }
   card.appendChild(ws);
 
+  // ── Description / method of victory ──
+  const ds = document.createElement('div');
+  ds.className = 'description-section';
+  const dl = document.createElement('span');
+  dl.className = 'description-label';
+  dl.textContent = 'METHOD:';
+  ds.appendChild(dl);
+  const di = document.createElement('input');
+  di.type = 'text';
+  di.className = 'description-input';
+  di.placeholder = 'e.g. TKO, Unanimous Decision, Split Decision…';
+  di.value = fight.description;
+  di.addEventListener('input', (e) => { state.fights[idx].description = e.target.value; save(); });
+  di.addEventListener('focus', (e) => { e.stopPropagation(); });
+  ds.appendChild(di);
+  card.appendChild(ds);
+
   return card;
 }
 
@@ -639,7 +682,7 @@ function mkNameWrap(idx, corner, val) {
   inp.placeholder = `${corner === 'red' ? 'RED' : 'BLUE'} FIGHTER NAME`;
   inp.value = val;
   inp.addEventListener('input', (e) => { state.fights[idx][`${corner}Name`] = e.target.value; save(); });
-  inp.addEventListener('focus', () => activate(idx, state.fights[idx].activeRound));
+  inp.addEventListener('focus', (e) => { e.stopPropagation(); state.activeFight = idx; syncStatus(); });
   wrap.appendChild(inp);
 
   const icon = document.createElement('span');
@@ -656,7 +699,7 @@ function mkScoreInput(pfx, idx, rIdx, corner, val) {
   inp.min = 7; inp.max = 10;
   inp.className = `score-inp ${corner}`;
   inp.value = val;
-  inp.addEventListener('focus', () => activate(idx, state.fights[idx].activeRound));
+  inp.addEventListener('focus', (e) => { e.stopPropagation(); state.activeFight = idx; state.fights[idx].activeRound = rIdx; syncStatus(); });
   const commit = () => {
     let v = parseInt(inp.value);
     if (isNaN(v)) v = 10;
@@ -678,7 +721,7 @@ function mkTotalScoreInput(pfx, idx, corner, val, isOverride) {
   inp.id = `${pfx}-${idx}-tot-sc-${corner}`;
   inp.value = val;
   inp.title = 'Click to override total score. Clear to revert to auto-sum.';
-  inp.addEventListener('focus', () => activate(idx, state.fights[idx].activeRound));
+  inp.addEventListener('focus', (e) => { e.stopPropagation(); state.activeFight = idx; syncStatus(); });
   inp.addEventListener('change', () => {
     const v = parseInt(inp.value);
     if (!isNaN(v)) {
@@ -791,7 +834,7 @@ function exportCSV() {
   const cols = [
     'Fight','Corner','Fighter Name',
     'R1 Strikes','R1 Score','R2 Strikes','R2 Score','R3 Strikes','R3 Score',
-    'Total Score','Result'
+    'Total Score','Result','Method'
   ];
   const rows = [cols];
 
@@ -812,14 +855,14 @@ function exportCSV() {
       f.rounds[0].redPts, f.rounds[0].redScore,
       f.rounds[1].redPts, f.rounds[1].redScore,
       f.rounds[2].redPts, f.rounds[2].redScore,
-      redTotal, result('red')
+      redTotal, result('red'), f.description || ''
     ]);
     rows.push([
       `Fight ${f.id}`, 'BLUE', f.blueName || 'Blue Corner',
       f.rounds[0].bluePts, f.rounds[0].blueScore,
       f.rounds[1].bluePts, f.rounds[1].blueScore,
       f.rounds[2].bluePts, f.rounds[2].blueScore,
-      blueTotal, result('blue')
+      blueTotal, result('blue'), ''
     ]);
   });
 

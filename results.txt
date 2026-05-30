@@ -1,9 +1,29 @@
+1
 red; empire 
 blue eduardo
-
 Winner: Eduardo
 
+2
 red - anton
 blue - yusuf
 w; red anton
 
+3
+red caleb
+blue rayyan 
+winner: caleb
+
+4
+red - jay
+blue - gabriel
+winner: gabriel
+
+5
+red- dean
+blue -diego
+winner: dean 
+
+6
+red elliot
+blue preet
+w preet
