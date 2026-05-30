@@ -1,0 +1,723 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DFC | Scorecards</title>
+  <style>
+    :root {
+      --red: #C8102E;
+      --blue: #003087;
+      --black: #0A0A0A;
+      --white: #FFFFFF;
+      --off-white: #F2F2F2;
+      --gray-light: #E0E0E0;
+      --gray: #AAAAAA;
+      --gold: #E8B923;
+      --active-bg: #FFFDE7;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: Arial, Helvetica, sans-serif;
+      background: var(--off-white);
+      color: var(--black);
+      min-height: 100vh;
+    }
+
+    /* ── HEADER ── */
+    header {
+      background: var(--black);
+      color: var(--white);
+      padding: 10px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 4px solid var(--red);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      gap: 12px;
+    }
+
+    .logo { display: flex; align-items: baseline; gap: 0; flex-shrink: 0; }
+    .logo-dfc { font-size: 28px; font-weight: 900; font-style: italic; color: var(--white); letter-spacing: -1px; }
+    .logo-sep { color: var(--red); font-size: 28px; font-weight: 900; margin: 0 6px; }
+    .logo-sub { font-size: 13px; font-weight: 700; letter-spacing: 4px; color: var(--gray); text-transform: uppercase; }
+
+    .header-controls { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+
+    .mode-toggle { display: flex; border: 2px solid #444; border-radius: 2px; overflow: hidden; }
+    .mode-btn {
+      padding: 6px 12px; background: transparent; color: #888;
+      border: none; cursor: pointer; font-size: 11px; font-weight: 700;
+      letter-spacing: 1px; text-transform: uppercase; transition: all 0.15s;
+    }
+    .mode-btn.active { background: var(--white); color: var(--black); }
+    .mode-btn:not(.active):hover { background: #222; color: var(--white); }
+
+    .btn {
+      padding: 6px 14px; border: 2px solid transparent; cursor: pointer;
+      font-size: 11px; font-weight: 700; letter-spacing: 1px;
+      text-transform: uppercase; transition: all 0.15s; white-space: nowrap;
+    }
+    .btn-wht { background: transparent; border-color: #555; color: var(--white); }
+    .btn-wht:hover { background: var(--white); color: var(--black); }
+    .btn-red { background: var(--red); color: var(--white); border-color: var(--red); }
+    .btn-red:hover { background: #a00e24; }
+
+    /* ── KEY GUIDE BAR ── */
+    .key-guide-bar {
+      background: #111; border-bottom: 2px solid #222;
+      padding: 5px 20px; display: flex; align-items: center; gap: 20px;
+      font-size: 11px; flex-wrap: wrap;
+    }
+    .kg-group { display: flex; align-items: center; gap: 5px; color: #aaa; }
+    .kg-label { font-weight: 700; letter-spacing: 1px; font-size: 10px; }
+    .kg-label.red { color: #ff4466; }
+    .kg-label.blue { color: #4a90d9; }
+    kbd {
+      display: inline-block; padding: 1px 6px;
+      background: #2a2a2a; border: 1px solid #555; border-bottom: 3px solid #555;
+      border-radius: 3px; font-family: monospace; font-size: 11px;
+      font-weight: 700; color: var(--white);
+    }
+    .kg-status { margin-left: auto; color: var(--gold); font-weight: 700; font-size: 10px; letter-spacing: 1px; }
+
+    /* ── MAIN ── */
+    main { padding: 18px; }
+
+    /* ── OVERVIEW GRID ── */
+    #overviewGrid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 18px;
+    }
+    #overviewGrid.hidden { display: none; }
+
+    /* ── FOCUS VIEW ── */
+    #focusView { display: none; }
+    #focusView.visible { display: block; }
+
+    .focus-toolbar {
+      display: flex; align-items: center; gap: 10px; margin-bottom: 18px; flex-wrap: wrap;
+    }
+    .back-btn {
+      background: var(--black); color: var(--white); border: none;
+      padding: 8px 16px; font-size: 11px; font-weight: 700;
+      letter-spacing: 1px; cursor: pointer;
+    }
+    .back-btn:hover { background: #333; }
+
+    .focus-fight-nav { display: flex; gap: 5px; }
+    .ffn-btn {
+      width: 36px; height: 34px; border: 2px solid var(--black);
+      background: transparent; font-size: 13px; font-weight: 700; cursor: pointer;
+    }
+    .ffn-btn.active { background: var(--black); color: var(--white); }
+    .ffn-btn:not(.active):hover { background: var(--gray-light); }
+
+    .focus-card-wrap { max-width: 700px; margin: 0 auto; }
+
+    /* ── FIGHT CARD ── */
+    .fight-card {
+      background: var(--white);
+      border: 3px solid var(--black);
+      box-shadow: 4px 4px 0 var(--black);
+      cursor: pointer;
+      transition: box-shadow 0.12s, transform 0.12s;
+    }
+    .fight-card:hover {
+      box-shadow: 6px 6px 0 var(--black);
+      transform: translate(-2px, -2px);
+    }
+    .fight-card.is-active {
+      border-color: var(--gold);
+      box-shadow: 0 0 0 2px var(--gold), 4px 4px 0 var(--black);
+    }
+    .fight-card.is-active:hover {
+      box-shadow: 0 0 0 2px var(--gold), 6px 6px 0 var(--black);
+    }
+
+    .card-header {
+      background: var(--black); padding: 6px 10px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .card-fight-num { font-size: 12px; font-weight: 900; color: var(--white); letter-spacing: 2px; }
+    .card-hdr-right { display: flex; align-items: center; gap: 8px; }
+    .active-badge { font-size: 9px; color: var(--gold); font-weight: 700; letter-spacing: 1px; }
+    .zoom-btn {
+      background: transparent; border: 1px solid #555; color: #aaa;
+      padding: 2px 7px; font-size: 10px; cursor: pointer; font-weight: 600;
+    }
+    .zoom-btn:hover { background: #333; color: var(--white); }
+
+    .corner-banners { display: grid; grid-template-columns: 1fr 28px 1fr; }
+    .corner-banner {
+      padding: 5px 8px; font-size: 9px; font-weight: 900;
+      letter-spacing: 2px; text-align: center; color: var(--white); text-transform: uppercase;
+    }
+    .corner-banner.red { background: var(--red); }
+    .corner-banner.blue { background: var(--blue); }
+    .corner-banner.vs { background: #1a1a1a; display: flex; align-items: center; justify-content: center; font-size: 8px; color: #666; }
+
+    .fighter-names-row { display: grid; grid-template-columns: 1fr 28px 1fr; border-bottom: 2px solid var(--black); }
+    .name-input {
+      border: none; padding: 6px 8px; font-size: 11px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.5px; text-align: center;
+      width: 100%; background: transparent; color: var(--black); outline: none;
+    }
+    .name-input.red { border-right: 1px solid var(--gray-light); }
+    .name-input.red:focus { background: #fff5f5; }
+    .name-input.blue:focus { background: #f0f5ff; }
+    .vs-mid {
+      background: #111; display: flex; align-items: center;
+      justify-content: center; font-size: 8px; font-weight: 900; color: #555;
+    }
+
+    /* ── SCORECARD TABLE ── */
+    .scorecard-table { width: 100%; border-collapse: collapse; }
+
+    .scorecard-table thead th {
+      background: #1c1c1c; color: #777; font-size: 8px; letter-spacing: 1px;
+      padding: 4px 2px; text-align: center; border: 1px solid #333;
+      font-weight: 700; text-transform: uppercase;
+    }
+
+    .scorecard-table tbody tr { transition: background 0.1s; cursor: pointer; }
+    .scorecard-table tbody tr:hover td:not(.td-rnum) { background: #fafafa; }
+    .scorecard-table tbody tr.round-active td:not(.td-rnum) { background: var(--active-bg); }
+
+    .scorecard-table td { border: 1px solid var(--gray-light); text-align: center; padding: 0; vertical-align: middle; }
+
+    .td-rnum {
+      background: var(--black); color: var(--white);
+      font-weight: 900; font-size: 13px; width: 28px; min-width: 28px;
+      padding: 10px 3px; border-color: #333;
+    }
+    .round-active .td-rnum { background: #333; }
+
+    .td-strikes { width: 75px; padding: 7px 5px; }
+    .strikes-num { display: block; font-size: 24px; font-weight: 900; line-height: 1; }
+    .td-strikes.red .strikes-num { color: var(--red); }
+    .td-strikes.blue .strikes-num { color: var(--blue); }
+
+    .td-score { width: 50px; }
+    .score-inp {
+      width: 100%; border: none; border-bottom: 2px solid transparent;
+      padding: 6px 2px; font-size: 19px; font-weight: 900;
+      text-align: center; background: transparent; outline: none;
+      -moz-appearance: textfield; transition: border-color 0.15s, background 0.15s;
+    }
+    .score-inp::-webkit-outer-spin-button,
+    .score-inp::-webkit-inner-spin-button { -webkit-appearance: none; }
+    .score-inp.red { color: var(--red); }
+    .score-inp.blue { color: var(--blue); }
+    .score-inp:focus { border-bottom-color: var(--gold); background: var(--active-bg); }
+
+    /* total row */
+    .tr-total td { background: #111; color: var(--white); padding: 6px 4px; border-color: #333; }
+    .td-total-rnum { background: #0a0a0a !important; font-size: 7px; letter-spacing: 1.5px; color: #555 !important; font-weight: 700; }
+    .total-sc { font-size: 19px; font-weight: 900; }
+    .total-sc.red { color: #ff4466; }
+    .total-sc.blue { color: #4a90d9; }
+    .total-pts { font-size: 10px; color: #888; display: block; }
+    .win-tag {
+      display: inline-block; font-size: 8px; padding: 1px 4px;
+      background: var(--gold); color: var(--black);
+      font-weight: 900; letter-spacing: 1px; margin-top: 2px;
+    }
+
+    /* ── ROUND NAV ── */
+    .round-nav { display: flex; border-top: 2px solid var(--black); }
+    .rn-btn {
+      flex: 1; padding: 6px 4px; background: #f0f0f0; border: none;
+      border-right: 1px solid var(--gray); font-size: 10px; font-weight: 700;
+      letter-spacing: 1px; cursor: pointer; transition: background 0.1s;
+    }
+    .rn-btn:last-child { border-right: none; }
+    .rn-btn:hover { background: var(--gray-light); }
+    .rn-btn.active { background: var(--black); color: var(--white); }
+
+    /* ── FOCUS MODE SCALING ── */
+    .focus-mode .strikes-num { font-size: 40px; }
+    .focus-mode .td-strikes { width: 110px; padding: 12px 8px; }
+    .focus-mode .td-score { width: 65px; }
+    .focus-mode .score-inp { font-size: 26px; padding: 9px 2px; }
+    .focus-mode .td-rnum { font-size: 17px; padding: 14px 5px; width: 38px; min-width: 38px; }
+    .focus-mode .scorecard-table thead th { font-size: 10px; padding: 6px 3px; }
+    .focus-mode .name-input { font-size: 14px; padding: 9px; }
+    .focus-mode .corner-banner { font-size: 12px; padding: 8px; letter-spacing: 3px; }
+    .focus-mode .corner-banners { grid-template-columns: 1fr 38px 1fr; }
+    .focus-mode .fighter-names-row { grid-template-columns: 1fr 38px 1fr; }
+    .focus-mode .card-fight-num { font-size: 15px; }
+    .focus-mode .total-sc { font-size: 26px; }
+    .focus-mode .total-pts { font-size: 12px; }
+    .focus-mode .rn-btn { font-size: 12px; padding: 9px 4px; }
+    .focus-mode .tr-total td { padding: 9px 5px; }
+    .focus-mode .zoom-btn { display: none; }
+
+    @media (max-width: 900px) {
+      #overviewGrid { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (max-width: 600px) {
+      #overviewGrid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <span class="logo-dfc">DFC</span>
+    <span class="logo-sep"> | </span>
+    <span class="logo-sub">SCORECARDS</span>
+  </div>
+  <div class="header-controls">
+    <div class="mode-toggle">
+      <button class="mode-btn active" id="btnOv" onclick="setMode('overview')">&#9632;&#9632; OVERVIEW</button>
+      <button class="mode-btn" id="btnFc" onclick="setMode('focus')">&#9633; FOCUS</button>
+    </div>
+    <button class="btn btn-wht" onclick="exportCSV()">&#8595; EXPORT CSV</button>
+    <button class="btn btn-red" onclick="resetAll()">&#8635; RESET</button>
+  </div>
+</header>
+
+<div class="key-guide-bar">
+  <div class="kg-group">
+    <span class="kg-label red">RED:</span>
+    <kbd>W</kbd><span>+1</span>
+    <kbd>A</kbd><span>-1</span>
+  </div>
+  <div class="kg-group">
+    <span class="kg-label blue">BLUE:</span>
+    <kbd>&#8593;</kbd><span>+1</span>
+    <kbd>&#8595;</kbd><span>-1</span>
+  </div>
+  <div class="kg-group" style="color:#666">Click a card or row to activate keyboard scoring</div>
+  <div class="kg-status" id="kgStatus">NO ACTIVE FIGHT</div>
+</div>
+
+<main>
+  <div id="overviewGrid"></div>
+
+  <div id="focusView">
+    <div class="focus-toolbar">
+      <button class="back-btn" onclick="setMode('overview')">&#8592; ALL FIGHTS</button>
+      <div class="focus-fight-nav" id="focusFightNav"></div>
+    </div>
+    <div class="focus-card-wrap focus-mode" id="focusCardWrap"></div>
+  </div>
+</main>
+
+<script>
+const FIGHTS = 6, ROUNDS = 3;
+
+const mkFight = (id) => ({
+  id,
+  redName: '', blueName: '',
+  activeRound: 0,
+  rounds: Array.from({ length: ROUNDS }, () => ({ redPts: 0, bluePts: 0, redScore: 10, blueScore: 10 }))
+});
+
+const state = {
+  mode: 'overview',
+  activeFight: null,
+  fights: Array.from({ length: FIGHTS }, (_, i) => mkFight(i + 1))
+};
+
+// ── Persistence ────────────────────────────────────────────────────────
+function load() {
+  try {
+    const s = localStorage.getItem('dfc_v1');
+    if (s) {
+      const p = JSON.parse(s);
+      if (Array.isArray(p.fights) && p.fights.length === FIGHTS) state.fights = p.fights;
+    }
+  } catch (_) {}
+}
+
+function save() {
+  localStorage.setItem('dfc_v1', JSON.stringify({ fights: state.fights }));
+}
+
+// ── Render ─────────────────────────────────────────────────────────────
+function render() {
+  renderGrid();
+  if (state.mode === 'focus') renderFocus();
+  syncStatus();
+}
+
+function renderGrid() {
+  const g = document.getElementById('overviewGrid');
+  g.innerHTML = '';
+  state.fights.forEach((f, i) => g.appendChild(buildCard(f, i, 'ov')));
+}
+
+function renderFocus() {
+  renderFocusNav();
+  renderFocusCard();
+}
+
+function renderFocusNav() {
+  const nav = document.getElementById('focusFightNav');
+  nav.innerHTML = '';
+  for (let i = 0; i < FIGHTS; i++) {
+    const b = document.createElement('button');
+    b.className = 'ffn-btn' + (state.activeFight === i ? ' active' : '');
+    b.textContent = i + 1;
+    b.onclick = () => { state.activeFight = i; renderFocus(); syncStatus(); };
+    nav.appendChild(b);
+  }
+}
+
+function renderFocusCard() {
+  const w = document.getElementById('focusCardWrap');
+  w.innerHTML = '';
+  const i = state.activeFight ?? 0;
+  w.appendChild(buildCard(state.fights[i], i, 'fc'));
+}
+
+function syncStatus() {
+  const el = document.getElementById('kgStatus');
+  if (state.activeFight === null) {
+    el.textContent = 'NO ACTIVE FIGHT';
+    el.style.color = '#666';
+  } else {
+    const f = state.fights[state.activeFight];
+    el.textContent = `FIGHT #${f.id} — ROUND ${f.activeRound + 1} ACTIVE`;
+    el.style.color = 'var(--gold)';
+  }
+}
+
+// ── Card builder ───────────────────────────────────────────────────────
+function buildCard(fight, idx, pfx) {
+  const isActive = state.activeFight === idx;
+  const isFocus = pfx === 'fc';
+
+  const card = document.createElement('div');
+  card.className = 'fight-card' + (isActive ? ' is-active' : '');
+  card.addEventListener('click', (e) => {
+    if (['INPUT','BUTTON'].includes(e.target.tagName)) return;
+    activate(idx, fight.activeRound);
+  });
+
+  // Header
+  const hdr = document.createElement('div');
+  hdr.className = 'card-header';
+
+  const num = document.createElement('span');
+  num.className = 'card-fight-num';
+  num.textContent = `FIGHT #${fight.id}`;
+  hdr.appendChild(num);
+
+  const right = document.createElement('div');
+  right.className = 'card-hdr-right';
+  if (isActive) {
+    const badge = document.createElement('span');
+    badge.className = 'active-badge';
+    badge.textContent = '● ACTIVE';
+    right.appendChild(badge);
+  }
+  if (!isFocus) {
+    const zb = document.createElement('button');
+    zb.className = 'zoom-btn';
+    zb.textContent = 'FOCUS ⤢';
+    zb.addEventListener('click', (e) => { e.stopPropagation(); zoomFight(idx); });
+    right.appendChild(zb);
+  }
+  hdr.appendChild(right);
+  card.appendChild(hdr);
+
+  // Corner banners
+  card.insertAdjacentHTML('beforeend', `
+    <div class="corner-banners">
+      <div class="corner-banner red">RED CORNER</div>
+      <div class="corner-banner vs">VS</div>
+      <div class="corner-banner blue">BLUE CORNER</div>
+    </div>`);
+
+  // Fighter name inputs
+  const nr = document.createElement('div');
+  nr.className = 'fighter-names-row';
+  nr.appendChild(mkNameInput(idx, 'red', fight.redName));
+  const vsMid = document.createElement('div');
+  vsMid.className = 'vs-mid';
+  vsMid.textContent = 'VS';
+  nr.appendChild(vsMid);
+  nr.appendChild(mkNameInput(idx, 'blue', fight.blueName));
+  card.appendChild(nr);
+
+  // Table
+  const tbl = document.createElement('table');
+  tbl.className = 'scorecard-table';
+  tbl.innerHTML = `<thead><tr>
+    <th>STRIKES</th><th>SCORE</th><th>RD</th><th>SCORE</th><th>STRIKES</th>
+  </tr></thead>`;
+
+  const tbody = document.createElement('tbody');
+
+  fight.rounds.forEach((round, rIdx) => {
+    const tr = document.createElement('tr');
+    if (isActive && fight.activeRound === rIdx) tr.classList.add('round-active');
+    tr.addEventListener('click', (e) => {
+      if (e.target.tagName === 'INPUT') return;
+      activate(idx, rIdx);
+    });
+
+    // Red strikes
+    const tdRS = document.createElement('td');
+    tdRS.className = 'td-strikes red';
+    const rsEl = document.createElement('span');
+    rsEl.className = 'strikes-num';
+    rsEl.id = `${pfx}-${idx}-${rIdx}-red`;
+    rsEl.textContent = round.redPts;
+    tdRS.appendChild(rsEl);
+    tr.appendChild(tdRS);
+
+    // Red score
+    const tdRSc = document.createElement('td');
+    tdRSc.className = 'td-score';
+    tdRSc.appendChild(mkScoreInput(pfx, idx, rIdx, 'red', round.redScore));
+    tr.appendChild(tdRSc);
+
+    // Round num
+    const tdRn = document.createElement('td');
+    tdRn.className = 'td-rnum';
+    tdRn.textContent = rIdx + 1;
+    tr.appendChild(tdRn);
+
+    // Blue score
+    const tdBSc = document.createElement('td');
+    tdBSc.className = 'td-score';
+    tdBSc.appendChild(mkScoreInput(pfx, idx, rIdx, 'blue', round.blueScore));
+    tr.appendChild(tdBSc);
+
+    // Blue strikes
+    const tdBS = document.createElement('td');
+    tdBS.className = 'td-strikes blue';
+    const bsEl = document.createElement('span');
+    bsEl.className = 'strikes-num';
+    bsEl.id = `${pfx}-${idx}-${rIdx}-blue`;
+    bsEl.textContent = round.bluePts;
+    tdBS.appendChild(bsEl);
+    tr.appendChild(tdBS);
+
+    tbody.appendChild(tr);
+  });
+
+  // Totals row
+  tbody.appendChild(buildTotalRow(fight, idx, pfx));
+  tbl.appendChild(tbody);
+  card.appendChild(tbl);
+
+  // Round nav
+  const nav = document.createElement('div');
+  nav.className = 'round-nav';
+  for (let r = 0; r < ROUNDS; r++) {
+    const b = document.createElement('button');
+    b.className = 'rn-btn' + (isActive && fight.activeRound === r ? ' active' : '');
+    b.textContent = `ROUND ${r + 1}`;
+    b.addEventListener('click', (e) => { e.stopPropagation(); activate(idx, r); });
+    nav.appendChild(b);
+  }
+  card.appendChild(nav);
+
+  return card;
+}
+
+function buildTotalRow(fight, idx, pfx) {
+  const tr = document.createElement('tr');
+  tr.className = 'tr-total';
+
+  const redPts = fight.rounds.reduce((s, r) => s + r.redPts, 0);
+  const bluePts = fight.rounds.reduce((s, r) => s + r.bluePts, 0);
+  const redSc = fight.rounds.reduce((s, r) => s + r.redScore, 0);
+  const blueSc = fight.rounds.reduce((s, r) => s + r.blueScore, 0);
+  const rw = redSc > blueSc, bw = blueSc > redSc;
+
+  const mkCell = (corner, sc, pts, wins) => {
+    const td = document.createElement('td');
+    td.className = `td-strikes ${corner}`;
+    td.innerHTML = `
+      <span class="total-sc ${corner}" id="${pfx}-${idx}-tot-sc-${corner}">${sc}</span>
+      <span class="total-pts" id="${pfx}-${idx}-tot-pts-${corner}">${pts} PTS</span>
+      ${wins ? '<span class="win-tag">WIN</span>' : ''}`;
+    return td;
+  };
+
+  tr.appendChild(mkCell('red', redSc, redPts, rw));
+
+  const blankSc = document.createElement('td');
+  blankSc.className = 'td-score';
+  tr.appendChild(blankSc);
+
+  const midTd = document.createElement('td');
+  midTd.className = 'td-rnum td-total-rnum';
+  midTd.textContent = 'TOT';
+  tr.appendChild(midTd);
+
+  const blankSc2 = document.createElement('td');
+  blankSc2.className = 'td-score';
+  tr.appendChild(blankSc2);
+
+  tr.appendChild(mkCell('blue', blueSc, bluePts, bw));
+
+  return tr;
+}
+
+function mkNameInput(idx, corner, val) {
+  const inp = document.createElement('input');
+  inp.type = 'text';
+  inp.className = `name-input ${corner}`;
+  inp.placeholder = `${corner.toUpperCase()} FIGHTER`;
+  inp.value = val;
+  inp.addEventListener('input', (e) => { state.fights[idx][`${corner}Name`] = e.target.value; save(); });
+  inp.addEventListener('focus', () => activate(idx, state.fights[idx].activeRound));
+  return inp;
+}
+
+function mkScoreInput(pfx, idx, rIdx, corner, val) {
+  const inp = document.createElement('input');
+  inp.type = 'number';
+  inp.min = 7; inp.max = 10;
+  inp.className = `score-inp ${corner}`;
+  inp.value = val;
+  inp.addEventListener('focus', () => activate(idx, state.fights[idx].activeRound));
+  const commit = () => {
+    let v = parseInt(inp.value);
+    if (isNaN(v)) v = 10;
+    v = Math.min(10, Math.max(7, v));
+    inp.value = v;
+    state.fights[idx].rounds[rIdx][`${corner}Score`] = v;
+    save();
+    refreshTotals(idx);
+  };
+  inp.addEventListener('change', commit);
+  inp.addEventListener('blur', commit);
+  return inp;
+}
+
+// ── Interactions ───────────────────────────────────────────────────────
+function activate(idx, rIdx) {
+  state.activeFight = idx;
+  state.fights[idx].activeRound = rIdx ?? 0;
+  if (state.mode === 'overview') render();
+  else { renderFocus(); syncStatus(); }
+  syncStatus();
+}
+
+function zoomFight(idx) {
+  state.activeFight = idx;
+  setMode('focus');
+}
+
+function setMode(m) {
+  state.mode = m;
+  const grid = document.getElementById('overviewGrid');
+  const fv = document.getElementById('focusView');
+  document.getElementById('btnOv').classList.toggle('active', m === 'overview');
+  document.getElementById('btnFc').classList.toggle('active', m === 'focus');
+  grid.classList.toggle('hidden', m !== 'overview');
+  fv.classList.toggle('visible', m === 'focus');
+  if (m === 'overview') { render(); }
+  else {
+    if (state.activeFight === null) state.activeFight = 0;
+    renderFocus();
+    syncStatus();
+  }
+}
+
+// ── Fast DOM update for keystrokes ─────────────────────────────────────
+function patchPts(idx, rIdx, corner, val) {
+  // Update both overview and focus elements if they exist
+  ['ov', 'fc'].forEach(pfx => {
+    const el = document.getElementById(`${pfx}-${idx}-${rIdx}-${corner}`);
+    if (el) el.textContent = val;
+  });
+  refreshTotals(idx);
+}
+
+function refreshTotals(idx) {
+  const f = state.fights[idx];
+  const redSc = f.rounds.reduce((s, r) => s + r.redScore, 0);
+  const blueSc = f.rounds.reduce((s, r) => s + r.blueScore, 0);
+  const redPts = f.rounds.reduce((s, r) => s + r.redPts, 0);
+  const bluePts = f.rounds.reduce((s, r) => s + r.bluePts, 0);
+  ['ov', 'fc'].forEach(pfx => {
+    const set = (id, v) => { const e = document.getElementById(id); if (e) e.textContent = v; };
+    set(`${pfx}-${idx}-tot-sc-red`, redSc);
+    set(`${pfx}-${idx}-tot-sc-blue`, blueSc);
+    set(`${pfx}-${idx}-tot-pts-red`, `${redPts} PTS`);
+    set(`${pfx}-${idx}-tot-pts-blue`, `${bluePts} PTS`);
+  });
+}
+
+// ── Keyboard ───────────────────────────────────────────────────────────
+document.addEventListener('keydown', (e) => {
+  if (e.target.tagName === 'INPUT') return;
+  if (state.activeFight === null) return;
+
+  const f = state.fights[state.activeFight];
+  const r = f.rounds[f.activeRound];
+  let corner = null, delta = 0;
+
+  if (e.key === 'w' || e.key === 'W')      { corner = 'red';  delta =  1; }
+  else if (e.key === 'a' || e.key === 'A') { corner = 'red';  delta = -1; }
+  else if (e.key === 'ArrowUp')            { corner = 'blue'; delta =  1; }
+  else if (e.key === 'ArrowDown')          { corner = 'blue'; delta = -1; }
+
+  if (!corner) return;
+  e.preventDefault();
+
+  const key = corner === 'red' ? 'redPts' : 'bluePts';
+  r[key] = Math.max(0, r[key] + delta);
+  save();
+  patchPts(state.activeFight, f.activeRound, corner, r[key]);
+});
+
+// ── CSV Export ─────────────────────────────────────────────────────────
+function exportCSV() {
+  const cols = ['Fight','Corner','Fighter Name','R1 Strikes','R1 Score','R2 Strikes','R2 Score','R3 Strikes','R3 Score','Total Score'];
+  const rows = [cols];
+
+  state.fights.forEach((f) => {
+    [['red', f.redName || `Red Corner`], ['blue', f.blueName || `Blue Corner`]].forEach(([corner, name]) => {
+      const sc = corner === 'red' ? 'redScore' : 'blueScore';
+      const pts = corner === 'red' ? 'redPts' : 'bluePts';
+      rows.push([
+        `Fight ${f.id}`, corner.toUpperCase(), name,
+        f.rounds[0][pts], f.rounds[0][sc],
+        f.rounds[1][pts], f.rounds[1][sc],
+        f.rounds[2][pts], f.rounds[2][sc],
+        f.rounds.reduce((s, r) => s + r[sc], 0)
+      ]);
+    });
+  });
+
+  const csv = rows.map(r => r.map(c => `"${c}"`).join(',')).join('\n');
+  const a = Object.assign(document.createElement('a'), {
+    href: URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' })),
+    download: `DFC_Scorecards_${new Date().toISOString().slice(0,10)}.csv`
+  });
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+}
+
+// ── Reset ──────────────────────────────────────────────────────────────
+function resetAll() {
+  if (!confirm('Reset all 6 scorecards? This cannot be undone.')) return;
+  state.fights = Array.from({ length: FIGHTS }, (_, i) => mkFight(i + 1));
+  state.activeFight = null;
+  save();
+  render();
+}
+
+// ── Init ───────────────────────────────────────────────────────────────
+load();
+render();
+</script>
+</body>
+</html>
